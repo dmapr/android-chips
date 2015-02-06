@@ -645,31 +645,19 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
      */
     private Bitmap getAvatarIcon(RecipientEntry contact) {
         // Don't draw photos for recipients that have been typed in OR generated on the fly.
-        long contactId = contact.getContactId();
-        boolean drawPhotos = isPhoneQuery() ?
-                contactId != RecipientEntry.INVALID_CONTACT
-                : (contactId != RecipientEntry.INVALID_CONTACT
-                        && (contactId != RecipientEntry.GENERATED_CONTACT &&
-                                !TextUtils.isEmpty(contact.getDisplayName())));
-
-        if (drawPhotos) {
-            byte[] photoBytes = contact.getPhotoBytes();
-            // There may not be a photo yet if anything but the first contact address
-            // was selected.
-            if (photoBytes == null && contact.getPhotoThumbnailUri() != null) {
-                // TODO: cache this in the recipient entry?
-                getAdapter().fetchPhoto(contact, contact.getPhotoThumbnailUri(), getContext().getContentResolver());
-                photoBytes = contact.getPhotoBytes();
-            }
-            if (photoBytes != null) {
-                return BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length);
-            } else {
-                // TODO: can the scaled down default photo be cached?
-                return mDefaultContactPhoto;
-            }
+        byte[] photoBytes = contact.getPhotoBytes();
+        // There may not be a photo yet if anything but the first contact address
+        // was selected.
+        if (photoBytes == null && contact.getPhotoThumbnailUri() != null) {
+            // TODO: cache this in the recipient entry?
+            getAdapter().fetchPhoto(contact, contact.getPhotoThumbnailUri(), getContext().getContentResolver());
+            photoBytes = contact.getPhotoBytes();
+        }
+        if (photoBytes != null) {
+            return BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.length);
         }
 
-        return null;
+        return mDefaultContactPhoto;
     }
 
     /**
@@ -1778,6 +1766,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
                         || TextUtils.equals(item.getDisplayName(), destination)
                         || (mValidator != null && !mValidator.isValid(destination)))) {
             entry = RecipientEntry.constructFakeEntry(destination, item.isValid());
+            entry.setPhotoBytes(item.getPhotoBytes());
         } else {
             entry = item;
         }
@@ -2110,7 +2099,9 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
             if (shouldShowEditableText(newChip)) {
                 scrollLineIntoView(getLayout().getLineForOffset(getChipStart(newChip)));
             }
-            showAlternates(newChip, mAlternatesPopup, getWidth());
+            if (currentChip.getContactId() != RecipientEntry.SUPPLIED_CONTACT) {
+                showAlternates(newChip, mAlternatesPopup, getWidth());
+            }
             setCursorVisible(false);
             return newChip;
         }
