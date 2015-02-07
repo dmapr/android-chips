@@ -2388,6 +2388,10 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
                     if (tokenEnd > editable.length()) {
                         tokenEnd = editable.length();
                     }
+                    if (isSuppliedContact(repl[0])) {
+                        // In case of a generated contact remove the entire contact
+                        tokenStart = getSpannable().getSpanStart(repl[0]);
+                    }
                     editable.delete(tokenStart, tokenEnd);
                     getSpannable().removeSpan(repl[0]);
                 }
@@ -2424,6 +2428,11 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
         long contactId = chip.getContactId();
         return contactId == RecipientEntry.INVALID_CONTACT
                 || (!isPhoneQuery() && contactId == RecipientEntry.GENERATED_CONTACT);
+    }
+
+    public boolean isSuppliedContact(DrawableRecipientChip chip) {
+        long contactId = chip.getContactId();
+        return contactId == RecipientEntry.SUPPLIED_CONTACT;
     }
 
     /**
