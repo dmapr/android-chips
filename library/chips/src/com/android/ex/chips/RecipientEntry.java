@@ -137,13 +137,13 @@ public class RecipientEntry {
     }
 
     /**
-     * Construct a RecipientEntry from just a phone number.
+     * Construct a RecipientEntry from supplied data.
      */
     public static RecipientEntry constructSuppliedEntry(final String displayName,
-                                                         final boolean isValid) {
+                                                         final boolean isValid, final String lookupKey) {
         return new RecipientEntry(ENTRY_TYPE_PERSON, displayName, displayName,
                 INVALID_DESTINATION_TYPE, null, SUPPLIED_CONTACT, null /* directoryId */,
-                SUPPLIED_CONTACT, null, true, isValid, null /* lookupKey */);
+                SUPPLIED_CONTACT, null, true, isValid, lookupKey);
     }
 
     /**
