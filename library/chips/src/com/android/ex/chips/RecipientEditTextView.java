@@ -29,6 +29,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.*;
 import android.text.*;
+import android.text.method.ArrowKeyMovementMethod;
 import android.text.method.QwertyKeyListener;
 import android.text.style.ImageSpan;
 import android.text.util.Rfc822Token;
@@ -256,6 +257,12 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
             }
         };
         setInputType(getInputType() | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        setMovementMethod(new ArrowKeyMovementMethod() {
+            @Override
+            public boolean onTouchEvent(TextView widget, Spannable buffer, MotionEvent event) {
+                return event.getAction() != MotionEvent.ACTION_UP && super.onTouchEvent(widget, buffer, event);
+            }
+        });
         setOnItemClickListener(this);
         setCustomSelectionActionModeCallback(this);
         mHandler = new Handler() {
@@ -346,6 +353,11 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
             setSelection(Math.min(getSpannable().getSpanEnd(last) + 1, getText().length()));
         }
         super.onSelectionChanged(start, end);
+    }
+
+    @Override
+    public boolean onPreDraw() {
+        return isCursorVisible() ? super.onPreDraw() : true;
     }
 
     @Override
@@ -512,7 +524,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
 
     private void expand() {
         if (mShouldShrink) {
-            setMaxLines(Integer.MAX_VALUE);
+            setMaxLines(mMaxLines);
         }
         removeMoreChip();
         setCursorVisible(true);
@@ -797,7 +809,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
         mDisableDelete = a.getBoolean(R.styleable.RecipientEditTextView_disableDelete, false);
 
         mLineSpacingExtra =  r.getDimension(R.dimen.line_spacing_extra);
-        mMaxLines = r.getInteger(R.integer.chips_max_lines);
+        mMaxLines = getMaxLines() != -1 ? getMaxLines() : Integer.MAX_VALUE;
         TypedValue tv = new TypedValue();
         if (context.getTheme().resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
             mActionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data, getResources()
@@ -1450,44 +1462,8 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
      */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (!isFocused()) {
-            // Ignore any chip taps until this view is focused.
-            return super.onTouchEvent(event);
-        }
-        boolean handled = super.onTouchEvent(event);
-        int action = event.getAction();
-        boolean chipWasSelected = false;
-        if (mSelectedChip == null) {
-            mGestureDetector.onTouchEvent(event);
-        }
-        if (mCopyAddress == null && action == MotionEvent.ACTION_UP) {
-            float x = event.getX();
-            float y = event.getY();
-            int offset = putOffsetInRange(x, y);
-            DrawableRecipientChip currentChip = findChip(offset);
-            if (currentChip != null) {
-                if (action == MotionEvent.ACTION_UP) {
-                    if (mSelectedChip != null && mSelectedChip != currentChip) {
-                        clearSelectedChip();
-                        mSelectedChip = selectChip(currentChip);
-                    } else if (mSelectedChip == null) {
-                        setSelection(getText().length());
-                        commitDefault();
-                        mSelectedChip = selectChip(currentChip);
-                    } else {
-                        onClick(mSelectedChip, offset, x, y);
-                    }
-                }
-                chipWasSelected = true;
-                handled = true;
-            } else if (mSelectedChip != null && shouldShowEditableText(mSelectedChip)) {
-                chipWasSelected = true;
-            }
-        }
-        if (action == MotionEvent.ACTION_UP && !chipWasSelected) {
-            clearSelectedChip();
-        }
-        return handled;
+        mGestureDetector.onTouchEvent(event);
+        return super.onTouchEvent(event);
     }
 
     private void scrollLineIntoView(int line) {
@@ -2956,8 +2932,34 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
 
     @Override
     public boolean onSingleTapUp(MotionEvent e) {
-        // Do nothing.
-        return false;
+        boolean handled = false;
+        boolean chipWasSelected = false;
+        if (mCopyAddress == null) {
+            float x = e.getX();
+            float y = e.getY();
+            int offset = putOffsetInRange(x, y);
+            DrawableRecipientChip currentChip = findChip(offset);
+            if (currentChip != null) {
+                if (mSelectedChip != null && mSelectedChip != currentChip) {
+                    clearSelectedChip();
+                    mSelectedChip = selectChip(currentChip);
+                } else if (mSelectedChip == null) {
+                    setSelection(getText().length());
+                    commitDefault();
+                    mSelectedChip = selectChip(currentChip);
+                } else {
+                    onClick(mSelectedChip, offset, x, y);
+                }
+                chipWasSelected = true;
+                handled = true;
+            } else if (mSelectedChip != null && shouldShowEditableText(mSelectedChip)) {
+                chipWasSelected = true;
+            }
+        }
+        if (!chipWasSelected) {
+            clearSelectedChip();
+        }
+        return handled;
     }
 
     @Override
