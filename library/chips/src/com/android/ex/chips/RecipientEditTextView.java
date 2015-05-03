@@ -3016,14 +3016,19 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements
                         // Only the unselected version of the chip has the avatar icon
                         int start = getChipStart(chip);
                         int end = getChipEnd(chip);
-                        Editable editable = getText();
-                        QwertyKeyListener.markAsReplaced(editable, start, end, "");
-                        editable.removeSpan(chip);
-                        try {
-                            editable.setSpan(constructChipSpan(chip.getEntry(), false, false),
-                                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        } catch (NullPointerException e) {
-                            Log.e(TAG, e.getMessage(), e);
+
+                        // Despite our best efforts it seems with an avatar load delay
+                        // we might still end with an invalid update, so add a sanity check
+                        if (start >=0 && end > start) { // SPAN_EXCLUSIVE_EXCLUSIVE requires non-zero length
+                            Editable editable = getText();
+                            QwertyKeyListener.markAsReplaced(editable, start, end, "");
+                            editable.removeSpan(chip);
+                            try {
+                                editable.setSpan(constructChipSpan(chip.getEntry(), false, false),
+                                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            } catch (NullPointerException e) {
+                                Log.e(TAG, e.getMessage(), e);
+                            }
                         }
                     }
                     break;
